@@ -1,0 +1,36 @@
+{
+	"name": "secure-route",
+	"version": "1.0.0",
+	"description": "Super simple authentication middleware for Express.",
+	"author": "Beneath the Ink <info@beneaththeink.com>",
+	"contributors": [
+		{
+			"name": "Tyler Johnson",
+			"email": "tyler@beneaththeink.com",
+			"url": "http://github.com/tyler-johnson"
+		}
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/BeneathTheInk/secure-route.git"
+	},
+	"main": "index.js",
+	"scripts": {},
+	"dependencies": {
+		"basic-auth": "~1.0.3",
+		"bluebird": "~2.10.1",
+		"underscore": "~1.8.3"
+	},
+	"license": "MIT",
+	"keywords": [
+		"authentication",
+		"authenticate",
+		"authorization",
+		"authorize",
+		"express",
+		"middleware",
+		"lockdown",
+		"secure",
+		"route"
+	]
+}
