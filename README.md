@@ -8,7 +8,7 @@ var secureRoute = require("secure-route");
 
 app.use(secureRoute({
 	signin: function(user, pass, done) {
-		if (user === "admin" && pass === "secretpassword") {
+		if (user === "admin" && pass === "12345") {
 			done(null, { name: user });
 		} else {
 			done(new Error("Invalid username or password"));
@@ -17,8 +17,10 @@ app.use(secureRoute({
 }));
 
 app.get("/", function(req, res, next) {
-	// req.user => { name: user };
+	res.send(req.user);
 });
+
+// GET http://admin:12345@localhost:3000/ → { name: "admin" }
 ```
 
 ## Usage
@@ -26,6 +28,8 @@ app.get("/", function(req, res, next) {
 ### secureRoute([ options ])
 
 This package exports a function that can be called with `options`. It will return a function that can be used in an Express/Connect middleware stack.
+
+This middleware will look for basic authentication and attempt to sign in the user with those credentials.
 
 This middleware adds several methods to the Express request object that are documented below.
 
