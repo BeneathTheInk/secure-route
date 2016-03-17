@@ -30,7 +30,7 @@ export default function(options={}) {
 			if (options.basic !== false) {
 				let basic = basicAuth(req);
 				if (basic != null) {
-					handleUser(await runSignin(basic.name, basic.pass));
+					handleUser(await runSignin(req, basic.name, basic.pass));
 				}
 			}
 
@@ -46,15 +46,15 @@ export default function(options={}) {
 		}
 	};
 
-	async function runSignin(user, pass) {
+	async function runSignin(req, user, pass) {
 		if (typeof options.signin === "function") {
-			return await confusedAsync(options.signin, this, [user, pass]);
+			return await confusedAsync(options.signin, req, [user, pass]);
 		}
 	}
 
 	// authenticates a user and applies result to the request
 	async function signin(user, pass) {
-		let data = await runSignin.call(this, user, pass);
+		let data = await runSignin(this, user, pass);
 		if (data != null) await this.setSignedInUser(data);
 		return data;
 	}
