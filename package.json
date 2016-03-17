@@ -1,36 +1,53 @@
 {
-	"name": "secure-route",
-	"version": "1.0.0",
-	"description": "Super simple authentication middleware for Express.",
-	"author": "Beneath the Ink <info@beneaththeink.com>",
-	"contributors": [
-		{
-			"name": "Tyler Johnson",
-			"email": "tyler@beneaththeink.com",
-			"url": "http://github.com/tyler-johnson"
-		}
-	],
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/BeneathTheInk/secure-route.git"
-	},
-	"main": "index.js",
-	"scripts": {},
-	"dependencies": {
-		"basic-auth": "~1.0.3",
-		"bluebird": "~2.10.1",
-		"underscore": "~1.8.3"
-	},
-	"license": "MIT",
-	"keywords": [
-		"authentication",
-		"authenticate",
-		"authorization",
-		"authorize",
-		"express",
-		"middleware",
-		"lockdown",
-		"secure",
-		"route"
-	]
+  "name": "secure-route",
+  "description": "Super simple authentication middleware for Express.",
+  "author": "Beneath the Ink <info@beneaththeink.com>",
+  "contributors": [
+    {
+      "name": "Tyler Johnson",
+      "email": "tyler@beneaththeink.com",
+      "url": "http://github.com/tyler-johnson"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BeneathTheInk/secure-route.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint src/",
+    "build": "make clean && make",
+    "prepublish": "npm run build",
+    "autorelease": "autorelease pre && npm publish && autorelease post"
+  },
+  "dependencies": {
+    "basic-auth": "^1.0.3",
+    "lodash": "^4.6.1"
+  },
+  "devDependencies": {
+    "autorelease": "^1.6.0",
+    "autorelease-github": "^1.1.1",
+    "autorelease-travis": "^1.2.1",
+    "babel-eslint": "^5.0.0",
+    "babel-plugin-external-helpers": "^6.5.0",
+    "babel-plugin-transform-async-to-generator": "^6.5.0",
+    "babel-plugin-transform-es2015-destructuring": "^6.6.4",
+    "babel-plugin-transform-es2015-parameters": "^6.6.4",
+    "babel-plugin-transform-object-rest-spread": "^6.6.4",
+    "eslint": "^2.4.0",
+    "rollup": "^0.25.4",
+    "rollup-plugin-babel": "^2.4.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "authentication",
+    "authenticate",
+    "authorization",
+    "authorize",
+    "express",
+    "middleware",
+    "lockdown",
+    "secure",
+    "route"
+  ]
 }
