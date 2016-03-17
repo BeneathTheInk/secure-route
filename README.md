@@ -1,5 +1,7 @@
 # Secure Route
 
+[![npm](https://img.shields.io/npm/v/secure-route.svg)](https://www.npmjs.com/package/secure-route) [![David](https://img.shields.io/david/BeneathTheInk/secure-route.svg)](https://david-dm.org/BeneathTheInk/secure-route) [![Build Status](https://travis-ci.org/BeneathTheInk/secure-route.svg?branch=master)](https://travis-ci.org/BeneathTheInk/secure-route)
+
 Super simple authentication middleware for Express.
 
 ```js
