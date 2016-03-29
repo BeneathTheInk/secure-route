@@ -15,11 +15,11 @@ export default function(options={}) {
 
 		try {
 			// add helpers to the request
+			req.authorize = callbackify(authorize);
 			req.login = callbackify(login);
 			req.logout = callbackify(logout);
 			req.lockdown = lockdown;
 			req.loggedIn = loggedIn;
-			req.authorize = callbackify(authorize);
 
 			// initiate the request and complete initial authorization
 			if (typeof options.init === "function") {
@@ -43,7 +43,6 @@ export default function(options={}) {
 
 	// applies user data to the request
 	async function authorize(data) {
-		this._userdata = data;
 		return await callOptionMethod(this, "authorize", [ data ]);
 	}
 
@@ -56,12 +55,15 @@ export default function(options={}) {
 
 	// removes user information from the request
 	async function logout() {
-		delete this._userdata;
 		return await callOptionMethod(this, "logout");
 	}
 
 	function loggedIn() {
-		return this._userdata != null;
+		if (typeof options.loggedIn !== "function") {
+			return false;
+		}
+
+		return options.loggedIn.call(this);
 	}
 
 	// prevents continuing through middlware when not signed in

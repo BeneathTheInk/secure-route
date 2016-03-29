@@ -42,6 +42,10 @@ test("calls authorize when req.authorize is called", async (t) => {
 			authorize: function(d) {
 				called = true;
 				t.equals(d, data, "passed data through");
+				this.user = d;
+			},
+			loggedIn: function() {
+				return Boolean(this.user);
 			}
 		});
 
@@ -86,6 +90,10 @@ test("calls login then authorize when req.login is called", async (t) => {
 				called.authorize = true;
 				t.ok(called.login, "already called login");
 				t.equals(d, data, "passed data through");
+				this.user = d;
+			},
+			loggedIn: function() {
+				return Boolean(this.user);
 			}
 		});
 
@@ -223,9 +231,14 @@ test("completes flow", async (t) => {
 			authorize: function(d) {
 				t.pass("called authorize");
 				t.equals(d, data, "passed data through");
+				this.user = d;
 			},
 			logout: function() {
 				t.pass("called logout");
+				delete this.user;
+			},
+			loggedIn: function() {
+				return Boolean(this.user);
 			}
 		});
 
