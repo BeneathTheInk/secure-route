@@ -15,7 +15,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "lint": "eslint src/",
+    "lint": "eslint src/ test/",
     "build": "make clean && make",
     "prepublish": "npm run build",
     "test": "make test",
