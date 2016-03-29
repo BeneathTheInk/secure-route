@@ -1,5 +1,5 @@
 // for methods that we don't know if they are callback or promise async
-export default function confusedAsync(fn, ctx, args) {
+export default function confusedAsync(fn, ctx, args=[]) {
 	if (fn.length > args.length) {
 		return new Promise(function(resolve, reject) {
 			fn.apply(ctx, args.concat(function(err, r) {

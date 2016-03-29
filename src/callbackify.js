@@ -1,9 +1,7 @@
-import {last} from "lodash";
-
 export default function(fn) {
 	return function(...args) {
 		let cb;
-		if (typeof last(args) === "function") {
+		if (typeof args[args.length - 1] === "function") {
 			cb = args.pop();
 		}
 
