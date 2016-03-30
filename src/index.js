@@ -1,42 +1,29 @@
-import {assign} from "lodash";
-import basicAuth from "basic-auth";
 import confusedAsync from "./confused-async";
 import callbackify from "./callbackify";
 
 export default function(options={}) {
 	return async function(req, res, next) {
 		// self-awareness
-		if (req.signin) return;
+		if (req.authorize) return;
 
-		// add helpers to the request
-		req.signin = callbackify(signin);
-		req.signout = callbackify(signout);
-		req.lockdown = lockdown;
-		req.setSignedInUser = callbackify(setSignedInUser);
-
-		// helpers for this method
+		// lock or finish method
 		function done(err) {
 			if (err) return next(err);
 			if (options.lock) req.lockdown(next);
 			else next();
 		}
 
-		function handleUser(user) {
-			req.user = user != null ? user : null;
-		}
-
 		try {
-			// basic auth check
-			if (options.basic !== false) {
-				let basic = basicAuth(req);
-				if (basic != null) {
-					handleUser(await runSignin(req, basic.name, basic.pass));
-				}
-			}
+			// add helpers to the request
+			req.authorize = callbackify(authorize);
+			req.login = callbackify(login);
+			req.logout = callbackify(logout);
+			req.lockdown = lockdown;
+			req.loggedIn = loggedIn;
 
-			// user's custom lookup
-			if (!req.user && typeof options.retrieve === "function") {
-				handleUser(await confusedAsync(options.retrieve, this, [ req, res ]));
+			// initiate the request and complete initial authorization
+			if (typeof options.init === "function") {
+				await confusedAsync(options.init, this);
 			}
 
 			// and complete
@@ -46,31 +33,37 @@ export default function(options={}) {
 		}
 	};
 
-	async function runSignin(req, user, pass) {
-		if (typeof options.signin === "function") {
-			return await confusedAsync(options.signin, req, [user, pass]);
+	async function callOptionMethod(ctx, name, args=[]) {
+		if (typeof options[name] !== "function") {
+			throw new Error(`Missing ${name} function in secure-route options.`);
 		}
+
+		return await confusedAsync(options[name], ctx, args);
+	}
+
+	// applies user data to the request
+	async function authorize(data) {
+		return await callOptionMethod(this, "authorize", [ data ]);
 	}
 
 	// authenticates a user and applies result to the request
-	async function signin(user, pass) {
-		let data = await runSignin(this, user, pass);
-		if (data != null) await this.setSignedInUser(data);
+	async function login(user, pass) {
+		let data = await callOptionMethod(this, "login", [ user, pass ]);
+		if (data != null) await this.authorize(data);
 		return data;
 	}
 
 	// removes user information from the request
-	async function signout() {
-		let req = this;
-		let res = req.res;
-		let user = req.user;
+	async function logout() {
+		return await callOptionMethod(this, "logout");
+	}
 
-		if (typeof options.clear === "function") {
-			await confusedAsync(options.clear, this, [ req, res ]);
+	function loggedIn() {
+		if (typeof options.loggedIn !== "function") {
+			return false;
 		}
 
-		req.user = null;
-		return user;
+		return options.loggedIn.call(this);
 	}
 
 	// prevents continuing through middlware when not signed in
@@ -78,36 +71,22 @@ export default function(options={}) {
 		let req = this;
 		let res = req.res;
 
+		// resolve the callback
 		if (typeof opts === "function" && next == null) {
-			next = opts;
-			opts = null;
+			[next,opts] = [opts,null];
+		} else if (next == null) {
+			next = req.next;
 		}
-
-		if (next == null) next = req.next;
 
 		// if the user is logged in, move on
-		if (req.user != null) return next();
-
-		opts = assign({}, options, opts || {});
+		if (req.loggedIn()) return next();
 
 		// otherwise this is a normal 401
-		if (typeof opts.unauthorized === "function") {
-			opts.unauthorized(req, res, next);
+		let unauthorized = (opts && opts.unauthorized) || options.unauthorized;
+		if (typeof unauthorized === "function") {
+			unauthorized(req, res, next);
 		} else {
 			res.sendStatus(401);
-		}
-	}
-
-	// applies user data to the request
-	async function setSignedInUser(userdata) {
-		let req = this;
-		let res = req.res;
-
-		// always set req.user to the userdata
-		req.user = userdata;
-
-		if (typeof options.save === "function") {
-			await confusedAsync(options.save, this, [ req, res ]);
 		}
 	}
 }

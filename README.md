@@ -5,16 +5,32 @@
 Super simple authentication middleware for Express.
 
 ```js
-var app = require("express")();
-var secureRoute = require("secure-route");
+const express = require("express");
+const basicAuth = require("basic-auth");
+const secureRoute = require("secure-route");
+
+const app = express();
 
 app.use(secureRoute({
-	signin: function(user, pass, done) {
-		if (user === "admin" && pass === "12345") {
-			done(null, { name: user });
+	init: function() {
+		const auth = basicAuth(this);
+		return this.login(auth.username, auth.password);
+	},
+	login: function(username, password) {
+		if (auth.username === "admin" && auth.password === "12345") {
+			return this.authorize({ name: auth.username });
 		} else {
-			done(new Error("Invalid username or password"));
+			throw new Error("Incorrect username or password.");
 		}
+	},
+	authorize: function(user) {
+		this.user = user;
+	},
+	loggedIn: function() {
+		return Boolean(this.user);
+	},
+	logout: function() {
+		delete this.user;
 	}
 }));
 
@@ -25,67 +41,178 @@ app.get("/", function(req, res, next) {
 // GET http://admin:12345@localhost:3000/ → { name: "admin" }
 ```
 
+## Install
+
+Grab a copy from NPM:
+
+```sh
+npm i secure-route --save
+```
+
 ## Usage
 
-### secureRoute([ options ])
+```text
+secureRoute([ options ]) → function
+```
 
 This package exports a function that can be called with `options`. It will return a function that can be used in an Express/Connect middleware stack.
 
-This middleware will look for basic authentication and attempt to sign in the user with those credentials.
+### Options
 
-This middleware adds several methods to the Express request object that are documented below.
+There are all the available options.
 
-The following options are available:
+Options that are functions can be run asynchronously by returning a Promise or adding an extra argument for a callback method. If the method is fully synchronous, do not add a callback method. Additionally, these functions are always called with the `request` as context (aka. `this`).
 
-- __`signin()`__ - The function to call when testing a user and password for signin. It is called with the signature `(username, password, callback)`. The callback should be called when finished with an error or an object representing the signed in user.
-- __`retrieve()`__ - A function that is called when looking up the currently signed in user from the request. It is called with the signature `(req, res, callback)`, where `req` and `res` are the current Express request and response streams. The callback should be called when finished with an error or an object representing the signed in user.
-- __`save()`__ - A function that is called after sign in that saves the user to the request. For example, this could be used to store a token in the session that can be viewed on `options.retrieve()`. It is called with the signature `(req, res, callback)`, where `req` and `res` are the current Express request and response streams. The callback should be called when finished, optionally with an error.
-- __`clear()`__ - Cleans up any state that was added with `options.save()`. This is run when the user is signed out. It is called with the signature `(req, res, callback)`, where `req` and `res` are the current Express request and response streams. The callback should be called when finished, optionally with an error.
-- __`lock`__ - A boolean to determine if this middleware should block unauthenticated requests. This should be used with `options.retrieve()`. If the user has incorrect or missing credentials when connecting, they will receive a 401 Unauthorized, unless `options.unauthorized` has been set.
-- __`unauthorized()`__ - A function that is called when an unauthorized user attempts a request. It is called with the signature `(req, res, next)`, where `req` and `res` are the current Express request and response streams. `next` is a function that when called allows express to proceed to the next middleware in the stack. This is useful for redirecting or displaying an error message.
+#### `init`
 
-### req.signin(username, password [, callback ])
+The `init` option is an *optional* function that is called at the beginning of every request. It is not given any special arguments.
 
-Attempts to sign in a user with `username` and `password`. The `callback` is called when sign in completes, possibly with an error.
+This method serves as a gatekeeper for the remaining middleware in the stack. It should parse the request for authorization information and setup the request for further middleware.
 
-This will call `options.save()` if it has been set, so that further calls to the server are authenticated.
+For example, this method could use Express sessions to determine if the user is already signed in.
 
 ```js
-app.post("/signin", function(req, res, next) {
-	req.signin(req.body.username, req.body.password, function(err) {
+secureRoute({
+	init: function() {
+		if (req.session && req.session.user) {
+			req.user = req.session.user;
+		}
+	}
+});
+```
+
+#### `authorize`
+
+The `authorize` option is a function that saves user data to the request. The user data usually comes as a result of `login` method, but it can also be called directly.
+
+This method should set up the request for the further middleware (similar to `init`), but it should also authorize future requests from the same client. This usually comes in the form of cookies or sessions
+
+```js
+secureRoute({
+	authorize: function(userdata) {
+		req.session.user = userdata;
+	}
+});
+```
+
+#### `login`
+
+The `login` option is a function that is responsible for authorizing a standard username and password. It is called with the username and password for arguments and should return user data. The result of this method is handed directly to `authorize()` so further requests are also authenticated.
+
+```js
+secureRoute({
+	login: function(name, pass, cb) {
+		users.findOne({ name }, function(err, user) {
+			if (err) return cb(err);
+			if (!user) return cb(new Error("Incorrect username."));
+			if (hashPassword(pass) !== user.password) {
+				return cb(new Error("Incorrect password."));
+			}
+
+			cb(null, user);
+		});
+	}
+});
+```
+
+#### `logout`
+
+The `logout` option is a function that clears the request of existing authorization. Usually this means reversing any request state that was added by `authorize`.
+
+```js
+secureRoute({
+	logout: function() {
+		delete req.session.user;
+	}
+});
+```
+
+#### `unauthorized`
+
+The `unauthorized` option is a function that is called whenever the route is locked, either via the `lock` option or when `req.lockdown()` is called. The method is special in that it has the syntax of a standard Express middleware function.
+
+```js
+secureRoute({
+	unauthorized: function(req, res, next) {
+		res.status(401).type("text").send("Not allowed here.");
+	}
+});
+```
+
+#### `lock`
+
+The `lock` option is a boolean that determines if the route should prevent requests which are not authorized. This is set to 'false' by default, which means that all requests, including unauthenticated requests, are allowed through.
+
+### Request Methods
+
+This middleware attaches several methods to the `request` object. These methods will be available to middleware declared below this one.
+
+#### req.login
+
+```text
+req.login(username, password [, callback ]) → Promise
+```
+
+Attempts to log in a user with `username` and `password`. The `callback` is called when sign in completes, possibly with an error.
+
+This will call both `options.login()` and `options.authorize()`, so that further calls to the server are authenticated.
+
+```js
+app.post("/login", function(req, res, next) {
+	req.login(req.body.username, req.body.password, function(err) {
 		if (err) return next(err);
 		res.render("signin-success", { user: req.user });
 	});
-})
+});
 ```
 
-### req.setSignedInUser(user [, callback ])
+#### req.authorize()
 
-Similar to `req.signin()` but skips the sign in step. This will directly apply user data to the request, and call `options.save()` so further request are authenticated. This is useful when signing in a user without a standard username and password.
+```text
+req.authorize(user [, callback ]) → Promise
+```
+
+Similar to `req.login()` but skips the sign in step. This will directly apply user data to the request, and call `options.authorize()` so further request are authenticated. This is useful when signing in a user without a standard username and password.
 
 ```js
 app.get("/auth", function(req, res, next) {
 	signinWithToken(req.query.token, function(err, user) {
 		if (err) return next(err);
-		req.setSignedInUser(user, next);
+		req.authorize(user, next);
 	});
 })
 ```
 
-### req.signout([ callback ])
+#### req.logout()
 
-Signs out the currently signed in user. This calls `options.clear()` under the hood. The `callback` is called when sign out completes, possibly with an error.
+```text
+req.logout([ callback ]) → Promise
+```
+
+Logs out the currently logged in user. This calls `options.logout()` under the hood. The `callback` is called when sign out completes, possibly with an error.
 
 ```js
-app.get("/signout", function(req, res, next) {
-	req.signout(function(err) {
+app.get("/logout", function(req, res, next) {
+	req.logout(function(err) {
 		if (err) return next(err);
-		res.redirect("/signin");
+		res.redirect("/login");
 	});
-})
+});
 ```
 
-### req.lockdown([ options ][, next ])
+#### req.loggedIn()
+
+```text
+req.loggedIn() → Boolean
+```
+
+Returns a boolean for whether or not the request has been authorized. This called `options.loggedIn()` under the hood.
+
+#### req.lockdown()
+
+```text
+req.lockdown([ options ][, next ]) → undefined
+```
 
 Prevents unauthorized users from proceeding through the middleware stack. The `next` function is optional and is called if the user is allowed to pass through. If you don't provide a next function, the current `next` for the middleware is used, which means that `req.lockdown()` must be the last item called in a route.
 

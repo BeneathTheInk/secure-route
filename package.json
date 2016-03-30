@@ -15,15 +15,13 @@
   },
   "main": "index.js",
   "scripts": {
-    "lint": "eslint src/",
+    "lint": "eslint src/ test/",
     "build": "make clean && make",
     "prepublish": "npm run build",
+    "test": "make test",
     "autorelease": "autorelease pre && npm publish && autorelease post"
   },
-  "dependencies": {
-    "basic-auth": "^1.0.3",
-    "lodash": "^4.6.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "autorelease": "^1.6.0",
     "autorelease-github": "^1.1.1",
@@ -35,8 +33,11 @@
     "babel-plugin-transform-es2015-parameters": "^6.6.4",
     "babel-plugin-transform-object-rest-spread": "^6.6.4",
     "eslint": "~2.2.0",
+    "express": "^4.13.4",
     "rollup": "^0.25.4",
-    "rollup-plugin-babel": "^2.4.0"
+    "rollup-plugin-babel": "^2.4.0",
+    "supertest": "^1.2.0",
+    "tape": "^4.5.1"
   },
   "license": "MIT",
   "keywords": [
