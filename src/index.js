@@ -23,7 +23,7 @@ export default function(options={}) {
 
 			// initiate the request and complete initial authorization
 			if (typeof options.init === "function") {
-				await confusedAsync(options.init, this);
+				await confusedAsync(options.init, req);
 			}
 
 			// and complete
