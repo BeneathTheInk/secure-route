@@ -59,9 +59,9 @@ This package exports a function that can be called with `options`. It will retur
 
 ### Options
 
-There are all the available options.
+Here are all of the available options.
 
-Options that are functions can be run asynchronously by returning a Promise or adding an extra argument for a callback method. If the method is fully synchronous, do not add a callback method. Additionally, these functions are always called with the `request` as context (aka. `this`).
+> Note: Options that are functions can be run asynchronously by returning a Promise or adding an extra argument for a callback method. If the method is fully synchronous, do not add a callback method. Additionally, these functions are always called with the `request` as context (aka. `this`).
 
 #### `init`
 
@@ -127,13 +127,27 @@ secureRoute({
 });
 ```
 
-#### `unauthorized`
+#### `loggedIn`
 
-The `unauthorized` option is a function that is called whenever the route is locked, either via the `lock` option or when `req.lockdown()` is called. The method is special in that it has the syntax of a standard Express middleware function.
+The `loggedIn` option is a function that should test the request to see if the user is considered signed in. Generally this tests for request state that was added with `authorize`.
 
 ```js
 secureRoute({
-	unauthorized: function(req, res, next) {
+	loggedIn: function() {
+		return Boolean(req.session && req.session.user);
+	}
+});
+```
+
+#### `unauthorized`
+
+The `unauthorized` option is an *optional* function that is called whenever the route is locked, either via the `lock` option or when `req.lockdown()` is called. It is passed a single argument, the response object.
+
+If this method is not provided, a `res.sendStatus(401)` is used for unauthorized requests.
+
+```js
+secureRoute({
+	unauthorized: function(res) {
 		res.status(401).type("text").send("Not allowed here.");
 	}
 });
@@ -147,7 +161,7 @@ The `lock` option is a boolean that determines if the route should prevent reque
 
 This middleware attaches several methods to the `request` object. These methods will be available to middleware declared below this one.
 
-#### req.login
+#### req.login()
 
 ```text
 req.login(username, password [, callback ]) → Promise
@@ -206,26 +220,28 @@ app.get("/logout", function(req, res, next) {
 req.loggedIn() → Boolean
 ```
 
-Returns a boolean for whether or not the request has been authorized. This called `options.loggedIn()` under the hood.
+Returns a boolean for whether or not the request has been authorized. This calls `options.loggedIn()` under the hood.
 
 #### req.lockdown()
 
 ```text
-req.lockdown([ options ][, next ]) → undefined
+req.lockdown([ next ]) → undefined
 ```
 
-Prevents unauthorized users from proceeding through the middleware stack. The `next` function is optional and is called if the user is allowed to pass through. If you don't provide a next function, the current `next` for the middleware is used, which means that `req.lockdown()` must be the last item called in a route.
+Prevents unauthorized users from proceeding through the middleware stack. This calls `options.unauthorized()` when a user is not logged in.
 
-The following options are available:
-
-- __`unauthorized()`__ - When specified, this function will override the `options.unauthorized()` specified in the main `secureRoute()` options.
+The `next` function is optional and is called if the user is allowed to pass through. If you don't provide a next function, the current `next` for the middleware is used, which means that `req.lockdown()` must be the last item called in a route.
 
 ```js
 app.get("/account", function(req, res, next) {
-	req.lockdown({
-		unauthorized: function(req, res) {
-			res.redirect("/signin");
-		}
-	});
+	req.lockdown();
 });
 ```
+
+#### req.unauthorized()
+
+```text
+req.unauthorized() → undefined
+```
+
+A request method to directly call `options.unauthorized()` and send the user an unauthorized response.
