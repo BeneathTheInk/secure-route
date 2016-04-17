@@ -20,6 +20,7 @@ export default function(options={}) {
 			req.logout = callbackify(logout);
 			req.lockdown = lockdown;
 			req.loggedIn = loggedIn;
+			req.unauthorized = unauthorized;
 
 			// initiate the request and complete initial authorization
 			if (typeof options.init === "function") {
@@ -58,6 +59,7 @@ export default function(options={}) {
 		return await callOptionMethod(this, "logout");
 	}
 
+	// tests that the user is signed in
 	function loggedIn() {
 		if (typeof options.loggedIn !== "function") {
 			return false;
@@ -66,27 +68,26 @@ export default function(options={}) {
 		return options.loggedIn.call(this);
 	}
 
+	// considers the request unauthorized
+	function unauthorized() {
+		if (typeof options.unauthorized === "function") {
+			options.unauthorized.call(this, this.res);
+		} else {
+			this.res.sendStatus(401);
+		}
+	}
+
 	// prevents continuing through middlware when not signed in
-	function lockdown(opts, next) {
+	function lockdown(next) {
 		let req = this;
-		let res = req.res;
 
 		// resolve the callback
-		if (typeof opts === "function" && next == null) {
-			[next,opts] = [opts,null];
-		} else if (next == null) {
-			next = req.next;
-		}
+		if (next == null) next = req.next;
 
 		// if the user is logged in, move on
 		if (req.loggedIn()) return next();
 
 		// otherwise this is a normal 401
-		let unauthorized = (opts && opts.unauthorized) || options.unauthorized;
-		if (typeof unauthorized === "function") {
-			unauthorized(req, res, next);
-		} else {
-			res.sendStatus(401);
-		}
+		req.unauthorized();
 	}
 }

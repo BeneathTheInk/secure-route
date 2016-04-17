@@ -173,7 +173,7 @@ test("calls unauthorized method when request is locked", async (t) => {
 		let called = false;
 		let app = createApp({
 			lock: true,
-			unauthorized: function(req, res) {
+			unauthorized: function(res) {
 				called = true;
 				res.sendStatus(401);
 			}
@@ -188,20 +188,20 @@ test("calls unauthorized method when request is locked", async (t) => {
 	}
 });
 
-test("calls unauthorized method as an option of req.lockdown", async (t) => {
+test("calls unauthorized method when req.lockdown is used", async (t) => {
 	try {
 		t.plan(1);
 
 		let called = false;
-		let app = createApp();
+		let app = createApp({
+			unauthorized: function(res) {
+				called = true;
+				res.sendStatus(401);
+			}
+		});
 
 		app.use(function(req) {
-			req.lockdown({
-				unauthorized: function(req, res) {
-					called = true;
-					res.sendStatus(401);
-				}
-			});
+			req.lockdown();
 		});
 
 		await supertest(app).get("/").expect(401);
