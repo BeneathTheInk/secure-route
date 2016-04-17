@@ -4,7 +4,7 @@ import callbackify from "./callbackify";
 export default function(options={}) {
 	return async function(req, res, next) {
 		// self-awareness
-		if (req.authorize) return;
+		if (req.authorize) return next();
 
 		// lock or finish method
 		function done(err) {
